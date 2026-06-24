@@ -55,7 +55,7 @@ def load_snap_sparse(filepath):
 
     # 构建 CSR: rows=dst, cols=src
     M = csr_matrix((weights, (dst_arr, src_arr)), shape=(N, N))
-
+    
     print(f"[Python] N={N}, E={len(edges_src)}, nnz={M.nnz}, "
           f"dangling={len(dangling)}, load_time={time.time() - t0:.3f}s")
     return M, N, dangling
