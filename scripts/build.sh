@@ -16,6 +16,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
+# ------ 加载 HPC 运行时 (集群自动生效, macOS 跳过) ------
+source "$SCRIPT_DIR/load_modules.sh"
+
 cd "$PROJECT_DIR"
 mkdir -p build
 
