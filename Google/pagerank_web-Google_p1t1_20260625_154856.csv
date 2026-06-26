@@ -1,0 +1,5 @@
+engine,dataset,num_nodes,num_edges,csr_nnz,mpi_ranks,omp_threads,damping,tol,iterations,converged,final_error,load_time_s,total_time_s,spmv_time_s,comm_time_s,comp_time_s,damp_time_s,comm_pct,comp_pct,avg_spmv_ms,avg_comm_ms,avg_comp_ms,mem_before_kb,mem_after_kb,mem_peak_rss_kb,l1_vs_ref,top10_match
+CSR_Serial,web-Google,916428,5105039,5105039,1,1,0.85,1e-06,62,yes,8.72947e-07,1.36375,3.48463,2.94863,0,2.94863,0.535886,0,100,47.5586,0,47.5586,80280,101804,101804,-1,0
+OMP_CSR_t1,web-Google,916428,5105039,5105039,1,1,0.85,1e-06,62,yes,8.72947e-07,1.36375,3.48546,2.9465,0,2.9465,0.538815,0,100,47.5241,0,47.5241,101804,101820,101820,-1,0
+MPI_CSR_p1,web-Google,916428,5105039,5105039,1,1,0.85,1e-06,62,yes,8.72947e-07,1.36375,6.66209,4.12895,1.22946,2.89949,0.529799,29.7765,70.2235,66.596,19.83,46.766,101820,94812,101820,-1,0
+Hybrid_p1_t1,web-Google,916428,5105039,5105039,1,1,0.85,1e-06,62,yes,8.72947e-07,1.36375,6.3494,3.95678,1.19569,2.76109,0.478215,30.2187,69.7813,63.8191,19.2853,44.5337,94812,94812,94812,-1,0

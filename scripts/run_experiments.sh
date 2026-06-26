@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 LAB_DIR="$PROJECT_DIR/lab_res"
 
-# ------ 加载 HPC 运行时 (集群自动生效, macOS 跳过) ------
+# ------ 加载 HPC C++ 运行时 (无 Python, 避免 miniconda libstdc++ 冲突) ------
 source "$SCRIPT_DIR/load_modules.sh"
 
 cd "$PROJECT_DIR"
@@ -33,8 +33,8 @@ OMP_LIST=""
 SINGLE_MPI=""
 SINGLE_OMP=""
 USE_SLURM=0
-SLURM_NODES=2
-SLURM_PARTITION="compute"
+SLURM_NODES=""          # 空 = 自动推算 (ceil(MPI/PPN), PPN 由 sinfo 获取)
+SLURM_PARTITION=""       # 空 = 自动检测可用分区
 SLURM_TIME="02:00:00"
 SLURM_ACCOUNT=""
 SLURM_QOS=""
@@ -43,13 +43,42 @@ PYTHON_REF=0
 BUILD_ONLY=0
 SKIP_BUILD=0
 
+# ------ 自动检测分区 ------
+detect_partition() {
+    if [ -n "${SLURM_PARTITION:-}" ]; then
+        return
+    fi
+    set +e
+    if command -v sinfo &>/dev/null; then
+        # 过滤掉 drain/down/test/gpu/xiaohe/hlli — 仅保留可用 CPU 分区
+        # 优先 cpu_96G (该集群上用户可用的默认分区)
+        local CANDIDATE
+        CANDIDATE=$(sinfo -h -o "%P %a" 2>/dev/null \
+            | grep -v 'drain\|down\|test\|gpu\|hlli\|xiaohe' \
+            | awk '$2=="up"{print $1}' | tr -d '*' | head -1)
+        if [ -n "$CANDIDATE" ]; then
+            SLURM_PARTITION="$CANDIDATE"
+        fi
+    fi
+    set -e
+    SLURM_PARTITION="${SLURM_PARTITION:-cpu_96G}"
+    echo "[detect] Partition: $SLURM_PARTITION"
+}
+
+# ------ 检测单节点可用核心数 ------
+detect_cores_per_node() {
+    local CORES
+    CORES=$(sinfo -h -o "%c" -p "${SLURM_PARTITION}" 2>/dev/null | head -1 | tr -d ' ')
+    echo "${CORES:-96}"
+}
+
 # ------ 帮助 ------
 usage() {
     cat <<EOF
 Usage: $0 [OPTIONS]
 
 Options:
-  --dataset NAME        web-Stanford | web-Google (default: web-Stanford)
+  --dataset NAME        web-Stanford | web-Google | soc-Epinions1 (default: web-Stanford)
   --dataset-path PATH   Direct path to dataset file
   --mpi N / --omp N     Single MPI processes / OMP threads
   --mpi-list "1,2,4"    Sweep MPI counts
@@ -96,8 +125,10 @@ done
 # ------ 解析数据集路径 ------
 if [ -z "$DATASET_PATH" ]; then
     case "$DATASET" in
-        web-Stanford)   DATASET_PATH="data/web-Stanford.txt" ;;
-        web-Google)     DATASET_PATH="data/web-Google.txt" ;;
+        web-Stanford)      DATASET_PATH="data/web-Stanford.txt" ;;
+        web-Google)        DATASET_PATH="data/web-Google.txt" ;;
+        soc-Epinions1)     DATASET_PATH="data/soc-Epinions1.txt" ;;
+        soc-LiveJournal1)  DATASET_PATH="data/soc-LiveJournal1.txt" ;;
         *) echo "ERROR: Unknown dataset '$DATASET'." >&2; exit 1 ;;
     esac
 fi
@@ -124,11 +155,13 @@ else
     usage
 fi
 
-# ------ Python 参考 ------
+# ------ Python 参考 (单独加载 miniconda, 不污染 C++ 运行时) ------
 if [ "$PYTHON_REF" = "1" ]; then
     echo "========================================"
     echo "  Generating Python scipy reference"
     echo "========================================"
+    # 加载 Python 模块 — 仅对此子 shell 生效
+    source "$SCRIPT_DIR/load_modules.sh" python
     python3 scripts/pagerank_ref_sparse.py "$DATASET_PATH"
     echo ""
 fi
@@ -146,13 +179,13 @@ generate_slurm_script() {
     local OMP_T=$2
     local JOB_NAME="pr_${DATASET_NAME}_p${MPI_P}t${OMP_T}"
 
-    # 每节点任务数: 推荐 = MPI_P (让 SLURM 自行分配到节点)
-    local NTASKS="${MPI_P}"
+    # 节点数: 显式指定才加 --nodes, 否则让 SLURM 自动分配
+    local NTASKS="$MPI_P"
 
     cat <<SBSCRIPT
 #!/bin/bash
 #SBATCH --job-name=${JOB_NAME}
-#SBATCH --nodes=${SLURM_NODES}
+$( [ -n "${SLURM_NODES:-}" ] && echo "#SBATCH --nodes=${SLURM_NODES}" )
 #SBATCH --ntasks=${NTASKS}
 #SBATCH --cpus-per-task=${OMP_T}
 #SBATCH --partition=${SLURM_PARTITION}
@@ -162,10 +195,11 @@ generate_slurm_script() {
 $( [ -n "$SLURM_ACCOUNT" ] && echo "#SBATCH --account=$SLURM_ACCOUNT")
 $( [ -n "$SLURM_QOS" ]     && echo "#SBATCH --qos=$SLURM_QOS")
 
-# ===== HPC 运行时 =====
+# ===== HPC 运行时 (GCC + MPI 仅, 不加载 miniconda 避免 libstdc++ 冲突) =====
 module load compiler/gnu/14.3.0  2>/dev/null
 module load mpi/openmpi/4.1.6    2>/dev/null
-module load apps/envs/miniconda3/25.5.1 2>/dev/null
+# 保护: GCC lib64 优先, 防止系统旧 libstdc++ 覆盖
+export LD_LIBRARY_PATH="/public/software/compiler/gnu/gcc-14.3.0/lib64:${LD_LIBRARY_PATH:-}"
 
 export OMP_NUM_THREADS=${OMP_T}
 export OMP_PROC_BIND=close
@@ -174,7 +208,8 @@ export OMP_PLACES=cores
 echo "================================================"
 echo "  SLURM Job: \${SLURM_JOB_ID}"
 echo "  Dataset:   ${DATASET_NAME}"
-echo "  MPI: ${MPI_P}  OMP: ${OMP_T}  Nodes: ${SLURM_NODES}"
+echo "  MPI: ${MPI_P}  OMP: ${OMP_T}  Nodes: \${SLURM_NNODES:-auto}"
+echo "  Partition: ${SLURM_PARTITION}"
 echo "  gcc:       \$(gcc --version 2>/dev/null | head -1)"
 echo "  mpic++:    \$(which mpic++)"
 echo "================================================"
@@ -202,15 +237,22 @@ run_local() {
     export OMP_PROC_BIND=close
     export OMP_PLACES=cores
 
-    # 集群: 确认模块已加载 (幂等)
-    module load compiler/gnu/14.3.0  2>/dev/null || true
-    module load mpi/openmpi/4.1.6    2>/dev/null || true
+    # 集群: 重新确认模块 + LD_LIBRARY_PATH (幂等)
+    source "$SCRIPT_DIR/load_modules.sh"
 
     mpirun -np "$MPI_P" ./build/matrix_app "$DATASET_PATH"
     echo ""
 }
 
 # ------ 执行 ------
+# SLURM 模式: 先检测分区
+if [ "$USE_SLURM" = "1" ]; then
+    detect_partition
+    echo "[detect] Partition: $SLURM_PARTITION"
+    echo "[detect] Node config: auto (ceil(MPI/16))"
+    echo ""
+fi
+
 TOTAL=$((${#MPI_VALS[@]} * ${#OMP_VALS[@]}))
 CURRENT=0
 for MPI_P in "${MPI_VALS[@]}"; do

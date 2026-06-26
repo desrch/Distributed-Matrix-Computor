@@ -1,0 +1,5 @@
+engine,dataset,num_nodes,num_edges,csr_nnz,mpi_ranks,omp_threads,damping,tol,iterations,converged,final_error,load_time_s,total_time_s,spmv_time_s,comm_time_s,comp_time_s,damp_time_s,comm_pct,comp_pct,avg_spmv_ms,avg_comm_ms,avg_comp_ms,mem_before_kb,mem_after_kb,mem_peak_rss_kb,l1_vs_ref,top10_match
+CSR_Serial,soc-LiveJournal1,4847571,68993773,68993773,1,4,0.85,1e-06,51,yes,8.67001e-07,25.4747,30.2923,28.1486,0,28.1486,2.1271,0,100,551.933,0,551.933,879952,955740,955740,-1,0
+OMP_CSR_t4,soc-LiveJournal1,4847571,68993773,68993773,1,4,0.85,1e-06,51,yes,8.67001e-07,25.4747,30.4521,28.3057,0,28.3057,2.12989,0,100,555.014,0,555.014,879996,955784,955784,-1,0
+MPI_CSR_p1,soc-LiveJournal1,4847571,68993773,68993773,1,4,0.85,1e-06,51,yes,8.67001e-07,25.4747,57.5199,40.0728,12.9392,27.1336,2.20135,32.2892,67.7108,785.742,253.71,532.032,880040,974744,974744,-1,0
+Hybrid_p1_t4,soc-LiveJournal1,4847571,68993773,68993773,1,4,0.85,1e-06,51,yes,8.67001e-07,25.4747,54.968,38.1063,12.6628,25.4435,2.11904,33.2302,66.7698,747.182,248.29,498.892,899000,974744,974744,-1,0

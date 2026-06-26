@@ -21,12 +21,13 @@ from collections import Counter
 
 
 def load_snap_sparse(filepath):
-    """加载 SNAP 格式图，构建列随机 CSR 矩阵"""
+    """加载 SNAP 格式图，构建列随机 CSR 矩阵。自动检测 0-based / 1-based。"""
     print(f"[Python] Loading {filepath} ...")
 
     edges_src = []
     edges_dst = []
     max_id = -1
+    min_id = 2**31
 
     with open(filepath, 'r') as f:
         for line in f:
@@ -36,11 +37,23 @@ def load_snap_sparse(filepath):
             parts = line.split()
             if len(parts) < 2:
                 continue
-            src = int(parts[0]) - 1  # 1-based → 0-based
-            dst = int(parts[1]) - 1
+            src = int(parts[0])
+            dst = int(parts[1])
             edges_src.append(src)
             edges_dst.append(dst)
             max_id = max(max_id, src, dst)
+            min_id = min(min_id, src, dst)
+
+    # auto-detect: 如果出现节点 0 则为 0-based
+    one_based = (min_id >= 1)
+    offset = 1 if one_based else 0
+    print(f"[Python] Detected: {'1' if one_based else '0'}-based "
+          f"(min_id={min_id}, max_id={max_id})")
+
+    if one_based:
+        edges_src = [s - 1 for s in edges_src]
+        edges_dst = [d - 1 for d in edges_dst]
+        max_id -= 1
 
     N = max_id + 1
     src_arr = np.array(edges_src, dtype=np.int32)

@@ -46,22 +46,35 @@ fi
 
 CXXFLAGS="-std=c++17 -DDMC_USE_MPI -Wall -Wextra ${BUILD_TYPE}"
 
-# ------ 平台检测 (OpenMP) ------
+# ------ 平台检测 (OpenMP / rpath / debug-fix) ------
 UNAME_S=$(uname -s)
-if [ "$USE_OMP" = "1" ]; then
-    if [ "$UNAME_S" = "Darwin" ]; then
-        # macOS: libomp via Homebrew
+if [ "$UNAME_S" = "Darwin" ]; then
+    # -------- macOS --------
+    if [ "$USE_OMP" = "1" ]; then
         if [ -d "/opt/homebrew/opt/libomp" ]; then
             CXXFLAGS="$CXXFLAGS -Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include -L/opt/homebrew/opt/libomp/lib -lomp"
         elif [ -d "/usr/local/opt/libomp" ]; then
             CXXFLAGS="$CXXFLAGS -Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include -L/usr/local/opt/libomp/lib -lomp"
         else
-            echo "WARNING: libomp not found via Homebrew; building without OpenMP" >&2
+            echo "WARNING: libomp not found; building without OpenMP" >&2
         fi
-    else
-        # Linux: GCC / standard Clang
+    fi
+else
+    # -------- Linux (GCC/Clang) --------
+    if [ "$USE_OMP" = "1" ]; then
         CXXFLAGS="$CXXFLAGS -fopenmp"
     fi
+
+    # 嵌入 rpath: 确保运行时找到 GCC 自带的 libstdc++/libgomp
+    # (避免被 miniconda 的旧 libstdc++.so.6 覆盖 → GLIBCXX_3.4.32 not found)
+    if [ -d "/public/software/compiler/gnu/gcc-14.3.0/lib64" ]; then
+        CXXFLAGS="$CXXFLAGS -Wl,-rpath,/public/software/compiler/gnu/gcc-14.3.0/lib64"
+    elif [ -d "/public/software/compiler/gnu/gcc-12.2.0/lib64" ]; then
+        CXXFLAGS="$CXXFLAGS -Wl,-rpath,/public/software/compiler/gnu/gcc-12.2.0/lib64"
+    fi
+
+    # 抑制旧 ld 对 DWARF-5 的警告 (不影响功能, 仅减少噪音)
+    CXXFLAGS="$CXXFLAGS -Wl,--compress-debug-sections=none"
 fi
 
 # ------ 编译 ------

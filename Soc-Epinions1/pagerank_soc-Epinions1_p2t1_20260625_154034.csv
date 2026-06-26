@@ -1,0 +1,3 @@
+engine,dataset,num_nodes,num_edges,csr_nnz,mpi_ranks,omp_threads,damping,tol,iterations,converged,final_error,load_time_s,total_time_s,spmv_time_s,comm_time_s,comp_time_s,damp_time_s,comm_pct,comp_pct,avg_spmv_ms,avg_comm_ms,avg_comp_ms,mem_before_kb,mem_after_kb,mem_peak_rss_kb,l1_vs_ref,top10_match
+MPI_CSR_p2,soc-Epinions1,75888,508837,508837,2,1,0.85,1e-06,54,yes,9.77819e-07,0.148105,0.361804,0.234394,0.103073,0.131321,0.0324809,43.9741,56.0259,4.34063,1.90875,2.43187,15372,24012,24012,1.47111e-15,10
+Hybrid_p2_t1,soc-Epinions1,75888,508837,508837,2,1,0.85,1e-06,54,yes,9.77819e-07,0.148105,0.376831,0.247368,0.104098,0.14327,0.0338382,42.0821,57.9179,4.58089,1.92773,2.65315,24012,24012,24012,1.47111e-15,10

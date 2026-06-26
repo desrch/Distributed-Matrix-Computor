@@ -1,0 +1,3 @@
+engine,dataset,num_nodes,num_edges,csr_nnz,mpi_ranks,omp_threads,damping,tol,iterations,converged,final_error,load_time_s,total_time_s,spmv_time_s,comm_time_s,comp_time_s,damp_time_s,comm_pct,comp_pct,avg_spmv_ms,avg_comm_ms,avg_comp_ms,mem_before_kb,mem_after_kb,mem_peak_rss_kb,l1_vs_ref,top10_match
+MPI_CSR_p4,web-Stanford,281903,2312497,2312497,4,4,0.85,1e-06,63,yes,9.22275e-07,1.1845,13.1132,7.921,7.63336,0.287636,0.116587,96.3687,3.63131,125.73,121.164,4.56565,39656,57288,57288,4.44303e-15,10
+Hybrid_p4_t4,web-Stanford,281903,2312497,2312497,4,4,0.85,1e-06,63,yes,9.22275e-07,1.1845,13.0304,7.98247,7.68358,0.298884,0.116392,96.2557,3.74426,126.706,121.962,4.74419,57288,57332,57332,4.44303e-15,10

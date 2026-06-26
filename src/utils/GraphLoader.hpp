@@ -41,13 +41,16 @@ public:
      * @brief 从 SNAP 格式文件加载有向图
      *
      * @param filepath  文件路径
-     * @param one_based  true 如果节点 ID 从 1 开始 (SNAP 惯例)
-     * @return Graph 包含列随机 CSR 矩阵
+     * @param one_based true=1-based, false=0-based, 默认-1=自动检测
+     *                  自动检测: 扫描首条非注释边, 包含节点0则为0-based
      */
-    static Graph loadSNAP(const std::string& filepath, bool one_based = true)
+    static Graph loadSNAP(const std::string& filepath, int one_based = -1)
     {
         // ============================================================
         // Pass 1: 统计节点、边和出度
+        // ============================================================
+        // ============================================================
+        // Pass 1: 读取所有边 (不做 ID 修正)
         // ============================================================
         std::ifstream fin(filepath);
         if (!fin.is_open()) {
@@ -56,29 +59,39 @@ public:
 
         std::vector<std::pair<int,int>> edges;
         edges.reserve(3000000);
-        int max_id = 0;
+        int raw_max = -1, raw_min = 2147483647;
 
         std::string line;
         while (std::getline(fin, line)) {
             if (line.empty() || line[0] == '#') continue;
             int src, dst;
-            if (std::sscanf(line.c_str(), "%d\t%d", &src, &dst) != 2) {
-                // 尝试空格分隔
-                if (std::sscanf(line.c_str(), "%d %d", &src, &dst) != 2)
-                    continue;
-            }
-            if (one_based) { src--; dst--; }
+            if (std::sscanf(line.c_str(), "%d\t%d", &src, &dst) != 2 &&
+                std::sscanf(line.c_str(), "%d %d", &src, &dst) != 2)
+                continue;
             edges.emplace_back(src, dst);
-            if (src > max_id) max_id = src;
-            if (dst > max_id) max_id = dst;
+            if (src > raw_max) raw_max = src;
+            if (dst > raw_max) raw_max = dst;
+            if (src < raw_min) raw_min = src;
+            if (dst < raw_min) raw_min = dst;
         }
         fin.close();
 
-        int N = max_id + 1;
-        int E = static_cast<int>(edges.size());
+        // ---- auto-detect base ----
+        if (one_based < 0) {
+            one_based = (raw_min >= 1) ? 1 : 0;
+        }
+        printf("[GraphLoader] Detected: %s-based (min_id=%d, max_id=%d)\n",
+               one_based ? "1" : "0", raw_min, raw_max);
 
-        printf("[GraphLoader] Parsed %d edges, max_node_id=%d → N=%d\n",
-               E, max_id, N);
+        // ---- apply ID correction if 1-based ----
+        if (one_based) {
+            for (auto& e : edges) { e.first--; e.second--; }
+            raw_max--;
+        }
+
+        int N = raw_max + 1;
+        int E = static_cast<int>(edges.size());
+        printf("[GraphLoader] Parsed %d edges, N=%d\n", E, N);
 
         // ============================================================
         // Pass 2: 计算出度 & 悬挂节点

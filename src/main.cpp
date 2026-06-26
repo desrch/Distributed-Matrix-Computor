@@ -178,7 +178,7 @@ int main(int argc, char** argv)
 
     if (rank == 0) {
         timer.start("load");
-        graph = GraphLoader::loadSNAP(filepath, /*one_based=*/true);
+        graph = GraphLoader::loadSNAP(filepath);  // auto-detect 0/1-based
         load_sec = timer.stop("load");
         N = graph.num_nodes;
         printf("  Graph: N=%d  E=%d  nnz=%d  dangling=%zu (%.2f%%)\n",

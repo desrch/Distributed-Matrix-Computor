@@ -1,0 +1,3 @@
+engine,dataset,num_nodes,num_edges,csr_nnz,mpi_ranks,omp_threads,damping,tol,iterations,converged,final_error,load_time_s,total_time_s,spmv_time_s,comm_time_s,comp_time_s,damp_time_s,comm_pct,comp_pct,avg_spmv_ms,avg_comm_ms,avg_comp_ms,mem_before_kb,mem_after_kb,mem_peak_rss_kb,l1_vs_ref,top10_match
+MPI_CSR_p2,soc-LiveJournal1,4847571,68993773,68993773,2,2,0.85,1e-06,51,yes,8.67001e-07,18.6962,49.3019,34.5781,14.2422,20.3359,1.97394,41.1886,58.8114,678.002,279.26,398.742,878356,982852,982852,-1,0
+Hybrid_p2_t2,soc-LiveJournal1,4847571,68993773,68993773,2,2,0.85,1e-06,51,yes,8.67001e-07,18.6962,49.2712,34.642,14.0788,20.5632,1.97218,40.6409,59.3591,679.254,276.055,403.199,907108,982916,982916,-1,0
