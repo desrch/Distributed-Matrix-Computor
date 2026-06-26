@@ -419,3 +419,46 @@ Dense根本放不下。
 ---
 
 
+
+# 结果分析
+
+实验结果分析 — 完成 ✅
+输出文件
+
+analysis/
+├── fig1_scalability.png       — 扩展性: 最佳单节点时间 + 耗时分解
+├── fig2_mpi_speedup.png       — MPI 强扩展: 执行时间 + Speedup
+├── fig3_omp_speedup.png       — OpenMP 强扩展: 执行时间 + Speedup
+├── fig4_hybrid_heatmaps.png   — 4× Hybrid 热力图 (MPI×OMP×Time)
+├── fig5_communication.png     — 通信占比堆叠柱状图
+├── fig6_memory.png            — 内存占用对比
+
+Part 1: 环境与数据
+Dataset	Nodes	Edges	nnz	Density
+soc-Epinions1	75,888	508,837	508,837	0.0088%
+web-Stanford	281,903	2,312,497	2,312,497	0.0029%
+web-Google	916,428	5,105,039	5,105,039	0.0006%
+soc-LiveJournal1	4,847,571	68,993,773	68,993,773	0.0003%
+Part 2: 正确性验证 (Local OMP=2, MPI=2)
+
+Dataset	Iter	L1 vs scipy	Top10
+Epinions	54	1.47×10⁻¹⁵	10/10
+Stanford	63	4.46×10⁻¹⁵	10/10
+Google	62	2.79×10⁻¹⁴	10/10
+LiveJournal	51	2.37×10⁻¹⁴	10/10
+
+全部四个数据集 L1 误差在机器精度级别 (10⁻¹⁴~10⁻¹⁵)，Top-10 节点完全匹配。
+
+Part 3-4: 扩展性
+Best Config	Total	Speedup
+Epinions: Hybrid_p2_t4	0.17s	—
+Stanford: OMP_CSR_t2	1.20s	—
+Google: OMP_CSR_t4	3.11s	—
+LiveJournal: CSR_Serial	29.4s	—
+小数据集 (Epinions/Stanford) 最佳策略是单机 OMP。对于 LiveJournal (4.8M 节点)，单机串行 CSR 反而比 MPI 快 — MPI 通信开销超过了并行收益。
+
+Parts 5-8: 分析要点
+OMP 在 Google 上获得 1.12x speedup (t=4)，小数据集几乎无加速（线程开销）
+MPI p=2 在较大数据集上有 1.1~1.2x，但 p≥4 后通信占主导 (>50%) 导致负加速
+内存：CSR 只需 46MB (Epinions) 到 954MB (LiveJournal)，而 Dense 等价存储需要 45GB~184TB
+通信占比：随 MPI 进程数增长，Epinions 从 9% 升至 80%+，LiveJournal 从 5% 升至 60%+
